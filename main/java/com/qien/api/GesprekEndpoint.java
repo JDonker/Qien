@@ -8,6 +8,8 @@ import com.qien.controller.GebruikerService;
 import com.qien.controller.GesprekService;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 import javax.transaction.Transactional;
@@ -26,8 +28,8 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
-
-
+import org.hibernate.annotations.LazyCollection;
+import org.hibernate.annotations.LazyCollectionOption;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -69,13 +71,14 @@ public class GesprekEndpoint {
 	// Deze response is in plain text. 
 	
 	public Response postGesprek(Gesprek gesprek){
-		Optional<Gebruiker> gesprekExisting = gebruikerService.findBynaam(gesprek.getNaam());
-			if(gesprekExisting.isPresent())
-				return Response.status(Status.NOT_ACCEPTABLE).build();
+		Optional<Gesprek> gesprekExisting = gesprekService.findBynaam(gesprek.getNaam());
+		if(gesprekExisting.isPresent())
+			return Response.status(Status.NOT_ACCEPTABLE).build();
 		// voeg start datum aan bericht toe
 		Bericht eerste = new Bericht();
 		eerste.setInhoud("Gesprek gestart op " + LocalDateTime.now().toString());
 		eerste.setVerzenderID(gesprek.getGebruikerID());
+		eerste.setDatum( LocalDateTime.now());
 		Bericht deze  = berichtenService.save(eerste);
 		Gesprek result = gesprekService.save(gesprek);
 		System.out.println(result.getId());
@@ -87,11 +90,30 @@ public class GesprekEndpoint {
 	
 	
 	@PUT
-	@Consumes(MediaType.APPLICATION_JSON)
-	@Produces(MediaType.TEXT_PLAIN)
+	@Produces(MediaType.APPLICATION_JSON)
 	@Path("{id}/{user}")
 	public Response putGebruiker(@PathParam("id") Long gesprekid, @PathParam("user") Long userid ){
-		return  addGebruiker(gesprekid,userid);
+		return addGebruiker(gesprekid,userid);
+	}
+	
+	@GET
+	@Produces(MediaType.APPLICATION_JSON)
+	@Path("{gebruikerid}/{ontvangerid}")
+	public Response getPersoonlijkGesprek(@PathParam("gebruikerid") Long gebruikerid, @PathParam("ontvangerid") Long ontvangerid ){
+		System.out.println("" + gebruikerid + ontvangerid);
+		
+		Optional<Gebruiker> gebruikerExisting = gebruikerService.findById(gebruikerid);
+		if(gebruikerExisting.isPresent()) {
+			Gebruiker dezegebruiker = gebruikerExisting.get();
+			Iterable<Bericht> berichten = dezegebruiker.getBerichten();
+			List<Bericht> filter = new ArrayList<Bericht>();
+			for(Bericht bericht : berichten) {
+				if(bericht.getOntvangerID()==ontvangerid|| bericht.getVerzenderID()==ontvangerid )
+				filter.add(bericht);
+			}
+			return Response.ok(filter).build();
+		}
+		return Response.status(Status.NOT_FOUND).build();
 	}
 	
 	
@@ -132,28 +154,30 @@ public Response deleteGesprek(@PathParam("id") Long id) {
 		Optional<Gesprek> gesprekExisting = gesprekService.findById(id);
 		if(gesprekExisting.isPresent()) {
 			Gesprek gesprek = gesprekExisting.get();
-			System.out.println(gesprek.getBerichten().get(0).getInhoud());
 			return Response.ok(gesprek).build();
 		}
 		return Response.status(Status.NOT_FOUND).build();
 	}
 	
 public Response addGebruiker(Long gesprekid,Long userid) {
-	System.out.println("hoi");
 	Optional<Gesprek> gesprekExisting = gesprekService.findById(gesprekid);
+	
 	if(gesprekExisting.isPresent()) {
 		Gesprek gesprek = gesprekExisting.get();
 		Optional<Gebruiker> gebruikerExisting = gebruikerService.findById(userid);
-		
 		if(gebruikerExisting.isPresent()) {
 			Gebruiker gebruiker = gebruikerExisting.get();
+			for(Gesprek deze:gebruiker.getGesprekken() ) {
+				// check of gebruiker al in het gesprek zit
+				if (deze.getId()==gesprek.getId())
+					return Response.status(Status.NOT_ACCEPTABLE).build();
+			}
 			gebruiker.getGesprekken().add(gesprek);
-		//	gesprek.getGebruikers().add(gebruiker);
+			gesprek.getGebruikers().add(gebruiker);
 			gebruikerService.save(gebruiker);
 			Gesprek result = gesprekService.save(gesprek);
 			return Response.accepted(result.getId()).build();
 		}
-		
 	}
 	return Response.status(Status.NOT_FOUND).build();
 }

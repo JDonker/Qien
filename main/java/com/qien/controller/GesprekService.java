@@ -37,6 +37,12 @@ public class GesprekService {
 		return gesprekkenRepository.findById(id);
 	}
 	
+	public Optional<Gesprek> findBynaam(String naam) {
+		System.out.println(naam);
+		return gesprekkenRepository.findByNaam(naam);
+	}
+	
+	
 	public boolean delete(long id) {
 		if (id<=0) {
 			return false;

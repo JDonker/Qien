@@ -1,13 +1,17 @@
 package com.qien;
 
+import java.time.LocalDateTime;
+
 import javax.persistence.Entity;
 import javax.persistence.Id;
+
+
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 
 
 @Entity
-public class Bericht {
+public class Bericht implements Comparable<Bericht> {
 	
 	@Id
 	@GeneratedValue(strategy=GenerationType.AUTO)
@@ -15,6 +19,15 @@ public class Bericht {
 	private String inhoud; 		// Het verzonden berricht
 	private long VerzenderID; 	// Persoon
 	private long ontvangerID; 	// Gesprek
+	private LocalDateTime datum;// Datum
+	
+	public LocalDateTime getDatum() {
+		return datum;
+	}
+	
+	public void setDatum(LocalDateTime datum) {
+		this.datum = datum;
+	}
 	private int status;			// status van het bericht (moet nog implementeren)
 	
 	
@@ -48,6 +61,16 @@ public class Bericht {
 	public void setStatus(int status) {
 		this.status = status;
 	}
+	@Override
+	public int compareTo(Bericht anderBericht) {
+		if (this.getDatum().isAfter(anderBericht.getDatum())) 
+			return 1;
+		if (this.getDatum().isAfter(anderBericht.getDatum()))
+			return -1;
+		return 0;
+	}
+	
+	
 
 
 }

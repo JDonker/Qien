@@ -1,8 +1,14 @@
 package com.qien.api;
 
 import com.qien.Bericht;
+import com.qien.Gebruiker;
+import com.qien.Gesprek;
 import com.qien.controller.BerichtenService;
+import com.qien.controller.GebruikerService;
+import com.qien.controller.GesprekService;
+import com.qien.controller.gesprekRepository;
 
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 import javax.ws.rs.Consumes;
@@ -33,6 +39,13 @@ public class BerichtenEndpoint {
 
 	@Autowired
 	BerichtenService berichtService;
+	
+	@Autowired
+	GesprekService gesprekService;
+	
+	@Autowired
+	GebruikerService gebruikerService;
+	
 	@GET
 	@Produces(MediaType.APPLICATION_JSON)
 	
@@ -46,18 +59,50 @@ public class BerichtenEndpoint {
 
 	}
 	
+	
+	
+	// Groepsgesprekken
+	@POST
+	@Consumes(MediaType.APPLICATION_JSON)
+	@Produces(MediaType.TEXT_PLAIN)
+	public Response postBericht(Bericht bericht){
+		System.out.println(bericht.getInhoud());
+		bericht.setDatum(LocalDateTime.now());
+		Bericht result = berichtService.save(bericht);
+		Optional<Gesprek> gesprek = gesprekService.findById(result.getOntvangerID());
+		if(gesprek.isPresent()) {
+			Gesprek tijdelijk = gesprek.get();
+			tijdelijk.getBerichten().add(result);
+			gesprekService.save(tijdelijk);
+		}
+		
+		return Response.accepted(result.getId()).build();	
+	}
+	
 	@POST
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.TEXT_PLAIN)
 	
-	// Deze sectie reageert op een post request dan wordt een verzorger toegevoegd doormiddel van save
-	// Het nieuwe verzorger object komt binnen als een json string
-	// Dit nieuwe verzorger object wordt direct toegevoegd aan de verzorger repository via de service
-	// Als alles gelukt wordt er een response terug gestuurd van het id van de laatste dag. 
-	// Deze response is in plain text. 
-	
-	public Response postBericht(Bericht bericht){
+	// Persoonlijke gesprekken
+	@Path("{id}")
+	public Response postGebruikerBericht(@PathParam("id") Long id, Bericht bericht){
+		System.out.println(bericht.getInhoud());
+		
+		// get gebruikers die bericht versturen en ontvangen 
+		Optional<Gebruiker> ontvanger = gebruikerService.findById(bericht.getOntvangerID());
+		Optional<Gebruiker> verzender = gebruikerService.findById(id);
+		bericht.setDatum(LocalDateTime.now());
 		Bericht result = berichtService.save(bericht);
+		if(ontvanger.isPresent() && verzender.isPresent()) {
+			
+			Gebruiker ontvangerD = ontvanger.get();
+			Gebruiker verzenderD = verzender.get();
+			System.out.println(bericht.getInhoud()+ 2);
+			ontvangerD.getBerichten().add(result);
+			gebruikerService.save(ontvangerD);
+			verzenderD.getBerichten().add(result);
+			gebruikerService.save(verzenderD);
+		}
 		return Response.accepted(result.getId()).build();	
 	}
 	

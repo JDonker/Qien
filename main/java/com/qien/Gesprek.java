@@ -1,7 +1,9 @@
 package com.qien;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
@@ -19,20 +21,16 @@ public class Gesprek {
 	private long Id;					// unieke identifier
 	@OneToMany(fetch = FetchType.EAGER)
 	private List<Bericht> berichten; 	// berichten in gesprek
-	//private List<Gebruiker> gebruikers; // gebruikers in gesprek
+	@OneToMany(fetch = FetchType.EAGER)
+	private Set<Gebruiker> gebruikers; // gebruikers in gesprek
 	private String naam;
 	private long gebruikerID;
 	
 	Gesprek(){
 		berichten = new ArrayList<Bericht>();
+		gebruikers = new LinkedHashSet<Gebruiker>();	
 	}
 	
-//	public List<Gebruiker> getGebruikers() {
-//		return gebruikers;
-//	}
-//	public void setGebruikers(List<Gebruiker> gebruikers) {
-//		this.gebruikers = gebruikers;
-//	}
 	public long getGebruikerID() {
 		return gebruikerID;
 	}
@@ -56,5 +54,13 @@ public class Gesprek {
 	}
 	public void setNaam(String naam) {
 		this.naam = naam;
+	}
+	
+	public Set<Gebruiker> getGebruikers() {
+		return gebruikers;
+	}
+
+	public void setGebruikers(Set<Gebruiker> gebruikers) {
+		this.gebruikers = gebruikers;
 	}
 }

@@ -5,7 +5,6 @@ import com.qien.controller.GebruikerService;
 
 import java.util.Optional;
 
-import javax.validation.Valid;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
@@ -18,9 +17,7 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
-import org.springframework.web.bind.annotation.RequestBody;
 
 
 
@@ -54,8 +51,6 @@ public class GebruikerEndpoint {
 		Iterable <Gebruiker> gebruikeren = gebruikerService.findAll();
 		return Response.ok(gebruikeren).build();
 	}
-	
-	
 	
 	@POST
 	@Consumes(MediaType.APPLICATION_JSON)

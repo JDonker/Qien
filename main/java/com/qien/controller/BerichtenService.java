@@ -32,14 +32,6 @@ public class BerichtenService {
 	// hier wordt een nieuw Bericht toegevoegd aan de repository
 	public Bericht save(Bericht bericht){
 		Bericht bericht1 = berichtenRepository.save(bericht);
-		Optional<Gesprek> gesprek = gesprekRepository.findById(bericht1.getOntvangerID());
-		
-		if(gesprek.isPresent()) {
-			Gesprek tijdelijk = gesprek.get();
-			tijdelijk.getBerichten().add(bericht1);
-			gesprekRepository.save(tijdelijk);
-		}
-		
 		return bericht1;
 	}
 	
