@@ -1,0 +1,420 @@
+
+<html>
+
+	<head>
+
+		<script>
+		
+		var gebruikerid=2;
+		var gebruikernaam="Jasper";
+		var huidiggesprekid=5;
+		var huidiggespreknaam="test";
+		var persoonlijkgesprek = false;
+		var ingelogd = false;
+		var gebruikerlijst = "";
+		var gespreklijst = "";
+		var gesprek = "";
+		
+		
+		
+			function loadpagina(){
+					chatten();
+			}
+			
+			
+			
+			function chatten() {
+				var thebody = document.getElementById("thebody");
+				var chatding = document.createElement("div"); 			
+				chatding.setAttribute("id","flexbox1");
+				chatding.setAttribute("style","text-align:justify; background: pink;display: flex; justify-content:space-evenly;  min-width: 80px;max-width: 800px;height: 400px;max-height: 400px;border: 1px solid black;margin: 5px; ");	
+				var stylestring = "background: orange;  border: 1px solid black;margin: 5px;"
+				var chatding1 = document.createElement("div"); 
+				chatding1.setAttribute("style",stylestring+ "flex-grow: 1;");		;
+				var chatding2 = document.createElement("div");
+				chatding2.setAttribute("style",stylestring + "flex-grow: 3;position: relative;");	
+				var chatding3 = document.createElement("div"); 
+				chatding3.setAttribute("style",stylestring+ "flex-grow: 1;");			
+				if (gebruikerlijst.length==0) {
+					getData("api/Gebruiker/other")
+				} else {
+					var table = oneRowTableJSON(gebruikerlijst,0,"setPersoonlijkGesprek","Gebruikers")
+					chatding1.appendChild(table);
+				}
+				
+				if (gespreklijst.length==0) {
+					//getGesprekken("api/GebruikerGesprekken/"+ this.gebruikernaam);
+				} else {
+					var table = oneRowTableJSON(gespreklijst,1,"setGesprek","Gesprekken")
+					chatding3.appendChild(table);
+				}
+				console.log(gesprek);
+				if (gesprek.length==0) {
+						getGesprek("api/Gesprek/berichten");
+				} else if (gesprek.length>0){
+				
+					if (gesprek.length>10) {
+						console.log(gesprek);
+						var jsondata2 = JSON.parse(this.gesprek);
+						console.log(jsondata2);
+
+						berichten = jsondata2;
+
+						berichten.sort(function(a, b){return a.id-b.id}); 
+						
+						
+						var table2 = document.createElement("div");
+						table2.setAttribute("style","overflow-x: hidden; overflow-y: scroll;height: 360px;");
+						table3 = document.createElement("div");
+						table3.setAttribute("style","border-style: none;")
+						for (var i = 0; i < berichten.length; i++) {
+							var line = document.createElement("tr");
+								line.innerHTML = berichten[i].afzender +": " + berichten[i].inhoud;
+							
+							console.log(berichten[i].datum)
+							if (berichten[i].datum!= null) {
+							berdate = berichten[i].datum;
+							var berdatum = new Date(parseInt(berdate.substring(0, 4)), parseInt(berdate.substring(5, 7))-1, parseInt(berdate.substring(8, 10)), parseInt(berdate.substring(11, 13)),parseInt(berdate.substring(14, 16)),parseInt(berdate.substring(17, 19)), 0); 
+						//	var blubdate = Date.now();
+			
+						//	console.log(berdatum.getTime());
+						//		console.log(blubdate.getTime());
+							
+							
+							table2.appendChild(line)
+							}
+						}
+							chatding2.appendChild(table2);
+					}
+					
+					var inst = setInterval(updateHuidigGesprek(), 1000);
+				
+					var verstuur = document.createElement("div"); 
+					var hetbericht = document.createElement("input"); 
+					var verzendknop = document.createElement("button"); 
+					
+					
+					hetbericht.addEventListener("keyup", function(event) {if (event.key === "Enter") {verzendBericht()}}); // Do work
+					hetbericht.setAttribute("id","hetbericht")
+					hetbericht.setAttribute("style","width: 350px")
+					verzendknop.innerHTML = "verstuur";
+					verzendknop.setAttribute("onclick","verzendBericht()")
+					verstuur.appendChild(hetbericht)
+					verstuur.appendChild(verzendknop)
+					verstuur.setAttribute("style","position: absolute; bottom: 0;  left: 0;margin: auto;")
+					
+				
+					chatding2.appendChild(verstuur)
+				}
+				
+				chatding.appendChild(chatding1);
+				chatding.appendChild(chatding2);
+				chatding.appendChild(chatding3);
+				
+				thebody.innerHTML = "";
+				thebody.appendChild(chatding);
+			
+			}
+			
+			function updateHuidigGesprek(){
+				console.log("hoi")
+			}
+			
+			
+			function updateScroll(){
+				var element = document.getElementById("yourDivID");
+				element.scrollTop = element.scrollHeight;
+			}
+			
+			function setGroepsGesprek(nummer,naam){
+				var data = '{"naam":"dummy", "wachtwoord":"dummy", "rol":"dummy","huidigGesprek":' + nummer +',"persoonlijkGesprek":' + false +'}';
+				console.log(data)
+				postData("api/Gebruiker/huidiggesprek",data);
+			}
+			
+			function setPersoonlijkGesprek(nummer,naam){
+				var data = '{"naam":"dummy", "wachtwoord":"dummy", "rol":"dummy","huidigGesprek":' + nummer +',"persoonlijkGesprek":' + true +'}';
+				console.log(data)
+				postData("api/Gebruiker/huidiggesprek",data);
+			}
+			
+			function verzendBericht(){
+				var inhoud = document.getElementById("hetbericht").value;
+				var berichtje = '{"inhoud":"'+inhoud+'"}'; 
+				postData("api/Bericht", berichtje);
+			}
+			
+			function nieuwGesprek(){
+				var inhoud = document.getElementById("hetbericht").value;
+				// maak er een json string versie van;
+				var berichtje = '{"inhoud":"'+inhoud+'","verzenderID":"'+gebruikerid+'","ontvangerID":"'+huidiggesprekid+'"}'; 
+				if (!this.persoonlijkgesprek) {
+				postData("api/Bericht", berichtje);
+				} else {
+					postData("api/Bericht/" + this.gebruikerid , berichtje);
+				}
+			}
+			
+			function getGesprek(){
+				var api =  "api/Gesprek/berichten"
+
+				// maak een nieuw request volgens het http protecol
+				var xhttp = new XMLHttpRequest();
+				console.log(api);
+				// als staat van het XMLHTTPRequest object verandert doe dan het volgende
+  				xhttp.onreadystatechange = function() {
+					if (this.readyState == 4 && this.status == 200) {
+					gesprek = this.responseText;
+					console.log("nu hier");
+					loadpagina();
+					}
+  				};
+				// geef aan dt je data wil gaan pakken uit de database
+				// https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/open
+				xhttp.open("GET", "http://localhost:8082/"+api);
+				// send request om data te gaan getten body wordt genegeerd
+				// https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/send
+				xhttp.send();
+			}
+			
+			function getData(api){
+			
+				// maak een nieuw request volgens het http protecol
+				var xhttp = new XMLHttpRequest();
+				
+				// als staat van het XMLHTTPRequest object verandert doe dan het volgende
+  				xhttp.onreadystatechange = function() {
+					if (this.readyState == 4) {
+					gebruikerlijst = this.responseText;
+					console.log(this.responseText);
+					loadpagina();
+					}
+  				};
+				// geef aan dt je data wil gaan pakken uit de database
+				// https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/open
+				xhttp.open("GET", "http://localhost:8082/"+api);
+				// send request om data te gaan getten body wordt genegeerd
+				// https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/send
+				xhttp.send();
+			}
+			
+
+			
+			function getGesprekken(api){
+			
+				// maak een nieuw request volgens het http protecol
+				var xhttp = new XMLHttpRequest();
+				console.log(api)
+				// als staat van het XMLHTTPRequest object verandert doe dan het volgende
+  				xhttp.onreadystatechange = function() {
+					if (this.readyState == 4) {
+					gespreklijst = this.responseText;
+					getGesprek();
+					}
+  				};
+				// geef aan dt je data wil gaan pakken uit de database
+				// https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/open
+				xhttp.open("GET", "http://localhost:8082/"+api);
+				// send request om data te gaan getten body wordt genegeerd
+				// https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/send
+				xhttp.send();
+			}
+		
+			
+			function oneRowTableJSON(input,kollom,functie,header){
+				var jsondata= JSON.parse(input);
+				
+					var col = [];
+						// verkijg de keys van de data 
+					for (var i = 0; i < jsondata.length; i++) {
+						// loop over de keys van ieder element
+						for (var key in jsondata[i]) {
+							// als het element mist in de variable col dan voeg je het toe
+							if (col.indexOf(key) === -1) {
+								col.push(key);
+							}
+						}
+					}
+					// maak een tabel element aan
+					var table = document.createElement("table");
+
+					// voeg een rij toe (-1 voor achteraan in de tabel)
+					var tr = table.insertRow(-1);      
+					
+					
+					var th = document.createElement("th");     // th is table header die heeft standaard een apparte stijl
+					th.innerHTML = header;
+					tr.appendChild(th);
+					
+					
+					// json data in de tabel gooien
+					for (var i = 0; i < jsondata.length; i++) { // loop over de entities
+						// voeg een rij toe (-1 voor achteraan in de tabel)
+						tr = table.insertRow(-1);
+						var tabCell = tr.insertCell(-1); // alternatieve methode om cell toe tevoegen document.createElement("td") kan ook
+						tabCell.innerHTML = jsondata[i][col[kollom]]; // lekker over de data loopen
+						tabCell.setAttribute("onClick",functie + "(" + jsondata[i].id + ",\"" + jsondata[i].naam  +"\")" )
+					}
+					return table;
+			}
+		
+			
+			
+
+			function postData(api, data){
+				
+				// maak een nieuw request volgens het http protecol
+				var xhttp = new XMLHttpRequest();
+				var id = this.huidiggesprekid;
+				// An EventHandler that is called whenever the readyState attribute changes.
+				// als staat van het XMLHTTPRequest object verandert doe dan het volgende
+  				xhttp.onreadystatechange = function() {
+					// check of de state ready is en de request moet accepted (202) ijn.
+					console.log("" +this.readyState + this.status)
+    				if (this.readyState == 4 && (this.status == 202|| this.status==200)) {
+						getGesprek();
+    				}
+  				};
+				
+				// Hier open je de server 
+				// https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/open
+				xhttp.open("POST", "http://localhost:8082/"+api, true);
+				// https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/setRequestHeader
+				// Geef aan dat je dat content van het type json gaat sturen
+				xhttp.setRequestHeader("Content-type", "application/json");
+				// verstuur de json string naar de server
+				xhttp.send(data);
+			}
+			
+			
+
+			
+			function deleteEntry(api){
+				// maak een nieuw request volgens het http protecol
+				var xhttp = new XMLHttpRequest();
+				
+				// als staat van het XMLHTTPRequest object verandert doe dan het volgende
+  				xhttp.onreadystatechange = function() {
+					if (this.readyState == 4) {
+      				document.getElementById("demo").innerHTML = this.responseText;
+				
+					getData('api/sorted/');
+					}
+  				};				
+
+				// Hier open je de server 
+				// https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/open
+				xhttp.open("DELETE", "http://localhost:8082/"+api, true);
+				// https://developer.mozilla.org/en-US/docs/Web/API/XMLHttpRequest/setRequestHeader
+				// Geef aan dat je dat content van het type json gaat sturen
+				//xhttp.setRequestHeader("Content-type", "application/json");
+				// verstuur de json string naar de server
+				xhttp.send();				
+				
+			}
+			
+			function maakJsonTabel(jsontext){
+
+				var jsondata= JSON.parse(jsontext);
+			
+					var col = [];
+						
+						
+						// verkijg de keys van de data 
+						for (var i = 0; i < jsondata.length; i++) {
+							// loop over de keys van ieder element
+							for (var key in jsondata[i]) {
+								// als het element mist in de variable col dan voeg je het toe
+								if (col.indexOf(key) === -1) {
+									col.push(key);
+								}
+							}
+						}
+						
+					// maak een tabel element aan
+					var table = document.createElement("table");
+
+					// voeg een rij toe (-1 voor achteraan in de tabel)
+					var tr = table.insertRow(-1);       
+					
+					// maak van de elementen in col (de keys) headers
+					for (var i = 0; i < col.length; i++) {
+						var th = document.createElement("th");     // th is table header die heeft standaard een apparte stijl
+						th.setAttribute("onclick","getData('api/sorted/"+ col[i] +"')")
+						th.innerHTML = col[i];
+						tr.appendChild(th);
+					}
+					
+					// json data in de tabel gooien
+					for (var i = 0; i < jsondata.length; i++) { // loop over de entities
+						// voeg een rij toe (-1 voor achteraan in de tabel)
+						tr = table.insertRow(-1);
+						// cellen toevegen aan een rij en de cellen vullen
+						for (var j = 0; j < col.length; j++) { // loop over de keys
+							var tabCell = tr.insertCell(-1); // alternatieve methode om cell toe tevoegen document.createElement("td") kan ook
+							tabCell.innerHTML = jsondata[i][col[j]]; // lekker over de data loopen
+						}
+						var tabCell = tr.insertCell(-1);
+						tabCell.innerHTML = "delete"
+						tabCell.setAttribute("onclick","deleteEntry('api/verzorger/"+ jsondata[i][col[col.length-1]] +"')")
+					}
+					
+									
+						// voeg een rij toe (-1 voor achteraan in de tabel)
+						tr = table.insertRow(-1);
+						// cellen toevegen aan een rij en de cellen vullen
+						for (var j = 0; j < col.length-1; j++) { // loop over de keys
+							var tabCell = tr.insertCell(-1); // alternatieve methode om cell toe tevoegen document.createElement("td") kan ook
+							var input = document.createElement("input");     // mmaak input element
+							input.setAttribute("type","text");
+							input.setAttribute("id","" + col[j] + "data");
+							tabCell.appendChild(input); // lekker over de data loopen
+						}
+						var tabCell = tr.insertCell(-1); // alternatieve methode om cell toe tevoegen document.createElement("td") kan ook
+						var tabCell = tr.insertCell(-1); // alternatieve methode om cell toe tevoegen document.createElement("td") kan ook
+						var butt = document.createElement("button");     // mmaak input element
+						butt.innerHTML="Add"
+						butt.setAttribute("onclick","verzorgerTabelVersturen()");
+						tabCell.appendChild(butt)
+						
+					
+
+					// tabelletje maken
+					var tabelhouder = document.getElementById("Verzorgertabel");
+					// even het element leeg maken ander komen er meerdere tabellen in
+					tabelhouder.innerHTML = "";
+					
+					// voeg tabel toe aan het element
+					tabelhouder.appendChild(table);
+			}
+				
+			
+
+		</script>
+		
+		<style>
+		
+		table, th, td {	border: 1px solid black;}
+		
+		
+		.flexbox1 div{ display: flexbox;
+						min-width: 80px;
+						max-width: 400px;
+						min-height: 80px;
+						border: 3px solid black;
+						margin: 5px}
+						
+		nav ul{height:200px; width:90%;}
+		nav ul{overflow:hidden; overflow-y:scroll;}
+		
+		</style>
+
+	</head>
+
+	<body id="thebody" onload="loadpagina()" onresize="loadpagina()">
+		<p id="Verzorgertabel"></p>
+		RESULT SERVER: <div id=demo></div>
+			
+    </body>
+
+</html>

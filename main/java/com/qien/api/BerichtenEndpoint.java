@@ -7,6 +7,7 @@ import com.qien.controller.BerichtenService;
 import com.qien.controller.GebruikerService;
 import com.qien.controller.GesprekService;
 import com.qien.controller.gesprekRepository;
+import com.qien.exception.UserNotFoundException;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -27,6 +28,8 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
 
@@ -59,51 +62,50 @@ public class BerichtenEndpoint {
 
 	}
 	
-	
-	
-	// Groepsgesprekken
 	@POST
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.TEXT_PLAIN)
-	public Response postBericht(Bericht bericht){
-		System.out.println(bericht.getInhoud());
-		bericht.setDatum(LocalDateTime.now());
-		Bericht result = berichtService.save(bericht);
-		Optional<Gesprek> gesprek = gesprekService.findById(result.getOntvangerID());
-		if(gesprek.isPresent()) {
-			Gesprek tijdelijk = gesprek.get();
-			tijdelijk.getBerichten().add(result);
-			gesprekService.save(tijdelijk);
+	public Response postBericht(Bericht bericht) {
+		SecurityContext securityContext = SecurityContextHolder.getContext();
+		try {
+			Gebruiker verzender = gebruikerService.findByNaam(securityContext.getAuthentication().getName());
+			bericht.setVerzenderID(verzender.getId());
+			bericht.setAfzender(verzender.getNaam());
+			bericht.setDatum(LocalDateTime.now());
+			bericht.setOntvangerID(verzender.getHuidigGesprek());
+			Bericht result = berichtService.save(bericht);
+			if (verzender.isPersoonlijkGesprek()) {
+				return postGebruikerBericht(verzender,result);
+			} else {
+				return postGroepsBericht(verzender,result);
+			}
+		} catch(UserNotFoundException e) {
+			return Response.status(Status.NOT_FOUND).build();
 		}
-		
-		return Response.accepted(result.getId()).build();	
 	}
 	
-	@POST
-	@Consumes(MediaType.APPLICATION_JSON)
-	@Produces(MediaType.TEXT_PLAIN)
-	
-	// Persoonlijke gesprekken
-	@Path("{id}")
-	public Response postGebruikerBericht(@PathParam("id") Long id, Bericht bericht){
-		System.out.println(bericht.getInhoud());
-		
-		// get gebruikers die bericht versturen en ontvangen 
-		Optional<Gebruiker> ontvanger = gebruikerService.findById(bericht.getOntvangerID());
-		Optional<Gebruiker> verzender = gebruikerService.findById(id);
-		bericht.setDatum(LocalDateTime.now());
-		Bericht result = berichtService.save(bericht);
-		if(ontvanger.isPresent() && verzender.isPresent()) {
-			
-			Gebruiker ontvangerD = ontvanger.get();
-			Gebruiker verzenderD = verzender.get();
-			System.out.println(bericht.getInhoud()+ 2);
-			ontvangerD.getBerichten().add(result);
-			gebruikerService.save(ontvangerD);
-			verzenderD.getBerichten().add(result);
-			gebruikerService.save(verzenderD);
+	// Groepsgesprekken
+	public Response postGroepsBericht(Gebruiker verzender,Bericht bericht){
+		Optional<Gesprek> gesprek = gesprekService.findById(bericht.getOntvangerID());
+		if(gesprek.isPresent()) {
+			Gesprek tijdelijk = gesprek.get();
+			tijdelijk.getBerichten().add(bericht);
+			gesprekService.save(tijdelijk);
 		}
-		return Response.accepted(result.getId()).build();	
+		return Response.accepted(bericht.getId()).build();	
+	}
+	// Persoonlijke gesprekken
+	public Response postGebruikerBericht(Gebruiker verzender, Bericht bericht){
+		Optional<Gebruiker> ontvanger = gebruikerService.findById(bericht.getOntvangerID());
+		if(ontvanger.isPresent()) {
+			Gebruiker ontvangerD = ontvanger.get();
+			System.out.println(bericht.getInhoud()+ 2);
+			ontvangerD.getBerichten().add(bericht);
+			gebruikerService.save(ontvangerD);
+			verzender.getBerichten().add(bericht);
+			gebruikerService.save(verzender);
+		}
+		return Response.accepted(bericht.getId()).build();	
 	}
 	
 @DELETE
@@ -132,8 +134,5 @@ public Response deleteVerzorger(@PathParam("id") Long id) {
 	}
 
 }
-
-
-
 }
 

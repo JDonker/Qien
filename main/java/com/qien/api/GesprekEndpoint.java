@@ -6,6 +6,7 @@ import com.qien.Gesprek;
 import com.qien.controller.BerichtenService;
 import com.qien.controller.GebruikerService;
 import com.qien.controller.GesprekService;
+import com.qien.exception.UserNotFoundException;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -31,6 +32,8 @@ import javax.ws.rs.core.Response.Status;
 import org.hibernate.annotations.LazyCollection;
 import org.hibernate.annotations.LazyCollectionOption;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
 
@@ -96,28 +99,6 @@ public class GesprekEndpoint {
 		return addGebruiker(gesprekid,userid);
 	}
 	
-	@GET
-	@Produces(MediaType.APPLICATION_JSON)
-	@Path("{gebruikerid}/{ontvangerid}")
-	public Response getPersoonlijkGesprek(@PathParam("gebruikerid") Long gebruikerid, @PathParam("ontvangerid") Long ontvangerid ){
-		System.out.println("" + gebruikerid + ontvangerid);
-		
-		Optional<Gebruiker> gebruikerExisting = gebruikerService.findById(gebruikerid);
-		if(gebruikerExisting.isPresent()) {
-			Gebruiker dezegebruiker = gebruikerExisting.get();
-			Iterable<Bericht> berichten = dezegebruiker.getBerichten();
-			List<Bericht> filter = new ArrayList<Bericht>();
-			for(Bericht bericht : berichten) {
-				if(bericht.getOntvangerID()==ontvangerid|| bericht.getVerzenderID()==ontvangerid )
-				filter.add(bericht);
-			}
-			return Response.ok(filter).build();
-		}
-		return Response.status(Status.NOT_FOUND).build();
-	}
-	
-	
-	
 	@DELETE
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.TEXT_PLAIN)
@@ -144,13 +125,31 @@ public Response deleteGesprek(@PathParam("id") Long id) {
 	}
 }
 	
-	// Deze sectie reageert op een get request 
-	// ontvangt geen input
-	// returned de verzorgers in JSON format.
 	@GET
+	@Path("/berichten")
 	@Produces(MediaType.APPLICATION_JSON)
-	@Path("{id}")
-	public Response listMessages(@PathParam("id") Long id) {
+	public Response krijgBerichten() {
+		SecurityContext securityContext = SecurityContextHolder.getContext();
+		System.out.println(securityContext.getAuthentication().getName() + " vraagt berichten" );
+		try {
+			Gebruiker gebruiker = gebruikerService.findByNaam(securityContext.getAuthentication().getName());
+			long gesprekid = gebruiker.getHuidigGesprek();
+			if(gesprekid>0) {
+				if(gebruiker.isPersoonlijkGesprek()) {
+					return getPersoonlijkGesprek(gebruiker.getId(),gesprekid);
+				} else {
+					return listMessages(gesprekid);
+				}
+			}
+		} catch(UserNotFoundException e) {
+			return Response.status(Status.NOT_FOUND).build();
+		}
+		return Response.status(Status.NOT_FOUND).build();
+	}
+	
+	// Zoek groepsgesprekken op
+	
+	private Response listMessages(Long id) {
 		Optional<Gesprek> gesprekExisting = gesprekService.findById(id);
 		if(gesprekExisting.isPresent()) {
 			Gesprek gesprek = gesprekExisting.get();
@@ -158,6 +157,27 @@ public Response deleteGesprek(@PathParam("id") Long id) {
 		}
 		return Response.status(Status.NOT_FOUND).build();
 	}
+	
+	// zoek persoonlijke berichten op
+	private Response getPersoonlijkGesprek(Long gebruikerid,Long ontvangerid ){
+		System.out.println("" + gebruikerid + ontvangerid);
+		
+		Optional<Gebruiker> gebruikerExisting = gebruikerService.findById(gebruikerid);
+		if(gebruikerExisting.isPresent()) {
+			Gebruiker dezegebruiker = gebruikerExisting.get();
+			Iterable<Bericht> berichten = dezegebruiker.getBerichten();
+			List<Bericht> filter = new ArrayList<Bericht>();
+			for(Bericht bericht : berichten) {
+				if(bericht.getOntvangerID()==ontvangerid|| bericht.getVerzenderID()==ontvangerid )
+				filter.add(bericht);
+			}
+			return Response.ok(filter).build();
+		}
+		return Response.status(Status.NOT_FOUND).build();
+	}
+	
+	
+	
 	
 public Response addGebruiker(Long gesprekid,Long userid) {
 	Optional<Gesprek> gesprekExisting = gesprekService.findById(gesprekid);

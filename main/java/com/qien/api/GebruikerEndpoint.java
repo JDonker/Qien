@@ -2,7 +2,10 @@ package com.qien.api;
 
 import com.qien.Gebruiker;
 import com.qien.controller.GebruikerService;
+import com.qien.exception.UserNotFoundException;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 import javax.ws.rs.Consumes;
@@ -17,129 +20,120 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
 
 
 
 // adress in de api
-@Path("Gebruiker")
+@Path("/Gebruiker")
 @Component
 public class GebruikerEndpoint {
-	
-
-//    @POST
-//    @Path("/add")
-//    @Consumes(MediaType.APPLICATION_JSON)
-//    @Produces(MediaType.APPLICATION_JSON)
-//    public ResponseEntity addGebruiker(@RequestBody @Valid Gebruiker gebruiker) {
-//        return ResponseEntity.ok(GebruikerService.addUser(gebruiker));
-//
-//    }
-//    
-
 	@Autowired
 	GebruikerService gebruikerService;
+	
+	
+	// Stuur alle gebruikers
+	
 	@GET
 	@Produces(MediaType.APPLICATION_JSON)
-	
-	// Deze sectie reageert op een get request 
-	// ontvangt geen input
-	// returned de verzorgers in JSON format.
-	
+	@PreAuthorize("isAuthenticated()")
 	public Response listGroep(){
-		Iterable <Gebruiker> gebruikeren = gebruikerService.findAll();
-		return Response.ok(gebruikeren).build();
+		Iterable <Gebruiker> gebruikers = gebruikerService.findAll();
+		return Response.ok(gebruikers).build();
 	}
+	
+	// Stuur alle gebruikers behave de vrager;
+	
+	@GET
+	@Path("/other")
+	@Produces(MediaType.APPLICATION_JSON)
+	@PreAuthorize("isAuthenticated()")
+	public Response listSelectedGroep(){
+		Iterable <Gebruiker> gebruikers = gebruikerService.findAll();
+		SecurityContext securityContext = SecurityContextHolder.getContext();
+		Gebruiker gebruikert = gebruikerService.findByNaam(securityContext.getAuthentication().getName());
+		List<Gebruiker> deze  = new ArrayList<Gebruiker>();
+		for(Gebruiker g: gebruikers) {
+			if (!g.getNaam().equals(gebruikert.getNaam()))
+				deze.add(g);
+		}
+		return Response.ok(deze).build();
+	}
+	
+	
+	
+	// Voeg nieuwe gebruiker toe
+	
+	@POST
+	@Path("/add")
+	@Consumes(MediaType.APPLICATION_JSON)
+	@Produces(MediaType.TEXT_PLAIN)
+	// Voeg nieuwe gebruiker toe middels post request (naam, wachtwoord,rol)
+	public Response postGebruiker(Gebruiker gebruiker){
+		Gebruiker result = gebruikerService.addGebruiker(gebruiker);
+		return Response.accepted(result.getId()).build();	
+	}
+	
+	// Verwijder gebruiker
+	
+	@DELETE
+	@Consumes(MediaType.APPLICATION_JSON)
+	@Produces(MediaType.TEXT_PLAIN)
+	@Path("{id}")
+	public Response deleteGebruiker(@PathParam("id") Long id) {
+		Optional<Gebruiker> gebruikerExisting = gebruikerService.findById(id);
+
+		if (!gebruikerExisting.isPresent()) {
+			return Response.status(Status.NOT_FOUND).build();			
+		};
+	
+		if (!gebruikerService.delete(id)) {
+			return Response.status(Status.NOT_FOUND).build();
+		} else {	
+			return Response.ok().build();
+		}
+
+	}
+
+	@GET
+	@Consumes(MediaType.APPLICATION_JSON)
+	@Produces(MediaType.APPLICATION_JSON)
+	@Path("{naam}")
+	public Response getGebruiker(@PathParam("naam") String naam) {
+		try {
+			Gebruiker gebruiker = gebruikerService.findByNaam(naam);
+			System.out.println(gebruiker.getNaam());
+			return Response.ok(gebruiker).build();
+		} catch(UserNotFoundException e) {
+			return Response.status(Status.NOT_FOUND).build();
+		}
+	}	
+	
+	
 	
 	@POST
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.TEXT_PLAIN)
-	
-	// Deze sectie reageert op een post request dan wordt een verzorger toegevoegd doormiddel van save
-	// Het nieuwe verzorger object komt binnen als een json string
-	// Dit nieuwe verzorger object wordt direct toegevoegd aan de verzorger repository via de service
-	// Als alles gelukt wordt er een response terug gestuurd van het id van de laatste dag. 
-	// Deze response is in plain text. 
-	
-	public Response postGebruiker(Gebruiker gebruiker){
-		Optional<Gebruiker> gebruikerExisting = gebruikerService.findBynaam(gebruiker.getNaam());
-		if(gebruikerExisting.isPresent())
-			return Response.status(Status.NOT_ACCEPTABLE).build();
-		Gebruiker result = gebruikerService.save(gebruiker);
-		return Response.accepted(result.getId()).build();	
-	}
-	
-@DELETE
-@Consumes(MediaType.APPLICATION_JSON)
-@Produces(MediaType.TEXT_PLAIN)
-	
-	// Deze sectie reageert op een post request dan wordt een verzorger toegevoegd doormiddel van save
-	// Het nieuwe verzorger object komt binnen als een json string
-	// Dit nieuwe verzorger object wordt direct toegevoegd aan de verzorger repository via de service
-	// Als alles gelukt wordt er een response terug gestuurd van het id van de laatste dag. 
-	// Deze response is in plain text. 
-	
-@Path("{id}")
-public Response deleteGebruiker(@PathParam("id") Long id) {
-	Optional<Gebruiker> gebruikerExisting = gebruikerService.findById(id);
-
-	if (!gebruikerExisting.isPresent()) {
-		return Response.status(Status.NOT_FOUND).build();			
-	};
-	
-	if (!gebruikerService.delete(id)) {
-		return Response.status(Status.NOT_FOUND).build();
-	} else {	
-		return Response.ok().build();
-	}
-
-}
-
-@GET
-@Consumes(MediaType.APPLICATION_JSON)
-@Produces(MediaType.APPLICATION_JSON)
-	// Deze sectie reageert op een post request dan wordt een verzorger toegevoegd doormiddel van save
-	// Het nieuwe verzorger object komt binnen als een json string
-	// Dit nieuwe verzorger object wordt direct toegevoegd aan de verzorger repository via de service
-	// Als alles gelukt wordt er een response terug gestuurd van het id van de laatste dag. 
-	// Deze response is in plain text. 
-	
-@Path("{naam}")
-public Response getGebruiker(@PathParam("naam") String naam) {
-	Optional<Gebruiker> gebruikerExisting = gebruikerService.findBynaam(naam);
-	if(gebruikerExisting.isPresent()) {
-		System.out.println(gebruikerExisting.get().getNaam());
-		return Response.ok(gebruikerExisting.get()).build();
-	} else {
-		return Response.status(Status.NOT_FOUND).build();
-	}
-}
-
-	
-	// Deze sectie reageert op een post request dan wordt een verzorger toegevoegd doormiddel van save
-	// Het nieuwe verzorger object komt binnen als een json string
-	// Dit nieuwe verzorger object wordt direct toegevoegd aan de verzorger repository via de service
-	// Als alles gelukt wordt er een response terug gestuurd van het id van de laatste dag. 
-	// Deze response is in plain text. 
-
-	@GET
-	@Consumes(MediaType.APPLICATION_JSON)
-	@Produces(MediaType.TEXT_PLAIN)
-	@Path("{naam}/{wachtwoord}")
-	public Response login(@PathParam("naam") String naam,@PathParam("wachtwoord") String wachtwoord) {
-		Optional<Gebruiker> gebruikerExisting = gebruikerService.findBynaam(naam);
-		if(gebruikerExisting.isPresent()) {
-			System.out.println(gebruikerExisting.get().getNaam());
-			if (gebruikerExisting.get().getWachtwoord().equals(wachtwoord))
-				return Response.accepted(gebruikerExisting.get().getId()).build();
-			return Response.status(Status.FOUND).build();
-		} else {
-			return Response.status(Status.CREATED).build();
+	@PreAuthorize("isAuthenticated()")
+	@Path("/huidiggesprek")
+	public Response setHuidigGesprek(Gebruiker henk) {
+		SecurityContext securityContext = SecurityContextHolder.getContext();
+		System.out.println(securityContext.getAuthentication().getName() + "hallo" + henk.getRol());
+		try {
+			Gebruiker gebruiker = gebruikerService.findByNaam(securityContext.getAuthentication().getName());
+			gebruiker.setPersoonlijkGesprek(henk.isPersoonlijkGesprek());
+			gebruiker.setHuidigGesprek(henk.getHuidigGesprek());
+			gebruikerService.save(gebruiker);
+			return Response.accepted(gebruiker.getId()).build();
+		} catch(UserNotFoundException e) {
+			System.out.println("What is wrong?");
+			return Response.status(Status.NOT_FOUND).build();
 		}
-	}
-
-
+	}	
 }
 
 

@@ -17,6 +17,14 @@ public class Bericht implements Comparable<Bericht> {
 	@GeneratedValue(strategy=GenerationType.AUTO)
 	private long Id;			// unieke identifier
 	private String inhoud; 		// Het verzonden berricht
+	private String afzender; 		// Het verzonden berricht
+	public String getAfzender() {
+		return afzender;
+	}
+
+	public void setAfzender(String afzender) {
+		this.afzender = afzender;
+	}
 	private long VerzenderID; 	// Persoon
 	private long ontvangerID; 	// Gesprek
 	private LocalDateTime datum;// Datum

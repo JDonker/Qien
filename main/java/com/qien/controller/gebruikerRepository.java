@@ -9,7 +9,5 @@ import com.qien.Gebruiker;
 
 @Component
 public interface gebruikerRepository extends CrudRepository<Gebruiker, Long> {
-	
 	  Optional<Gebruiker> findByNaam(String naam);
-
 }

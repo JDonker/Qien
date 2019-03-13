@@ -5,6 +5,7 @@ import com.qien.Gebruiker;
 import com.qien.Gesprek;
 import com.qien.controller.GebruikerService;
 import com.qien.controller.GesprekService;
+import com.qien.exception.UserNotFoundException;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -53,13 +54,13 @@ public class GebruikerGesprekkenEndpoint {
 	
 	@Path("{naam}")
 	public Response getGebruiker(@PathParam("naam") String naam) {
-		Optional<Gebruiker> gebruikerExisting = gebruikerService.findBynaam(naam);
-		if(gebruikerExisting.isPresent()) {
-			Gebruiker dezegebruiker = gebruikerExisting.get();
-			Iterable<Gesprek> gesprekken = dezegebruiker.getGesprekken();
+		try {
+			Gebruiker gebruiker = gebruikerService.findByNaam(naam);
+			Iterable<Gesprek> gesprekken = gebruiker.getGesprekken();
 			return Response.ok(gesprekken).build();
+		} catch(UserNotFoundException e) {
+			return Response.status(Status.NOT_FOUND).build();
 		}
-		return Response.status(Status.NOT_FOUND).build();
 	}
 
 

@@ -9,10 +9,8 @@ import javax.persistence.Entity;
 import javax.persistence.FetchType;
 import javax.persistence.Id;
 import javax.persistence.ManyToMany;
-import javax.persistence.OneToMany;
+import javax.validation.constraints.NotBlank;
 
-import org.hibernate.annotations.LazyCollection;
-import org.hibernate.annotations.LazyCollectionOption;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
@@ -26,28 +24,62 @@ public class Gebruiker {
 	@Id
 	@GeneratedValue(strategy=GenerationType.AUTO)
 	private long Id;					// unieke identifier
-	private String naam; 				// Het verzonden berricht
+	@NotBlank
+	private String naam,rol; 				// Het verzonden berricht
+	@NotBlank
+	@JsonIgnore
+	private String wachtwoord;
+	@ManyToMany(fetch = FetchType.EAGER)
+	@JsonIgnore
+	private List<Gesprek> gesprekken;	// Aan welke gesprekken neemt hij mee
+	@ManyToMany(fetch = FetchType.EAGER)
+	@JsonIgnore
+	private Set<Bericht> berichten; 	// berichten in gesprek
+	private long huidigGesprek;
+	private boolean persoonlijkGesprek;
+
+	public long getHuidigGesprek() {
+		return huidigGesprek;
+	}
+
+	public void setHuidigGesprek(long huidigGesprek) {
+		this.huidigGesprek = huidigGesprek;
+	}
+
+	public boolean isPersoonlijkGesprek() {
+		return persoonlijkGesprek;
+	}
+
+	public void setPersoonlijkGesprek(boolean persoonlijkGesprek) {
+		this.persoonlijkGesprek = persoonlijkGesprek;
+	}
+
 	public Set<Bericht> getBerichten() {
 		return berichten;
+	}
+
+	public String getRol() {
+		return rol;
+	}
+
+	public void setRol(String rol) {
+		this.rol = rol;
 	}
 
 	public void setBerichten(Set<Bericht> berichten) {
 		this.berichten = berichten;
 	}
-	private String wachtwoord; 			// Persoon
-	
-	@ManyToMany(fetch = FetchType.EAGER)
-	@JsonIgnore
-	private List<Gesprek> gesprekken;	// Aan welke gesprekken neemt hij mee
-	
-	
-	@ManyToMany(fetch = FetchType.EAGER)
-	@JsonIgnore
-	private Set<Bericht> berichten; 	// berichten in gesprek
 	
 	public Gebruiker(){
 		gesprekken = new ArrayList<Gesprek>();	
 		berichten = new LinkedHashSet<Bericht>();	
+	}
+	
+	public Gebruiker(String username, String wachtwoord, String rol) {
+		this();
+	    this.naam = username;
+	    this.wachtwoord = wachtwoord;
+	    this.rol = rol;
 	}
 	
 	public long getId() {
@@ -74,7 +106,4 @@ public class Gebruiker {
 	public void setGesprekken(List<Gesprek> gesprekken) {
 		this.gesprekken = gesprekken;
 	}
-
-	
-
 }
